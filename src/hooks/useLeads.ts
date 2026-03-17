@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
-import type { Lead, LeadStatus } from "@/types/lead";
+import type { Lead, LeadStatus, NoteCode } from "@/types/lead";
 
 const STORAGE_KEY = "linkedin-crm-leads";
+const CODES_STORAGE_KEY = "linkedin-crm-codes";
 
 function loadLeads(): Lead[] {
   try {
@@ -16,12 +17,30 @@ function saveLeads(leads: Lead[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
 }
 
+function loadCodes(): NoteCode[] {
+  try {
+    const data = localStorage.getItem(CODES_STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCodes(codes: NoteCode[]) {
+  localStorage.setItem(CODES_STORAGE_KEY, JSON.stringify(codes));
+}
+
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>(loadLeads);
+  const [codes, setCodes] = useState<NoteCode[]>(loadCodes);
 
   useEffect(() => {
     saveLeads(leads);
   }, [leads]);
+
+  useEffect(() => {
+    saveCodes(codes);
+  }, [codes]);
 
   const addLead = useCallback((lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => {
     const now = new Date().toISOString();
@@ -59,5 +78,22 @@ export function useLeads() {
     );
   }, []);
 
-  return { leads, addLead, updateLead, deleteLead, moveLeadToStatus };
+  const addCode = useCallback((code: Omit<NoteCode, "id">) => {
+    const newCode: NoteCode = { ...code, id: crypto.randomUUID() };
+    setCodes((prev) => [...prev, newCode]);
+    return newCode;
+  }, []);
+
+  const removeCode = useCallback((codeId: string) => {
+    setCodes((prev) => prev.filter((c) => c.id !== codeId));
+    // Also remove coded segments using this code
+    setLeads((prev) =>
+      prev.map((lead) => ({
+        ...lead,
+        codedSegments: lead.codedSegments?.filter((s) => s.codeId !== codeId),
+      }))
+    );
+  }, []);
+
+  return { leads, codes, addLead, updateLead, deleteLead, moveLeadToStatus, addCode, removeCode };
 }
