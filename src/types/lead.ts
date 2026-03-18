@@ -12,7 +12,7 @@ export type LeadStatus = (typeof LEAD_STATUSES)[number];
 export interface NoteCode {
   id: string;
   label: string;
-  color: string; // HSL string for the highlight color
+  color: string;
 }
 
 export interface CodedSegment {
@@ -29,6 +29,7 @@ export interface Lead {
   jobTitle: string;
   company: string;
   status: LeadStatus;
+  statusDate: string; // ISO timestamp — updates on every status change
   notes: string;
   codedSegments?: CodedSegment[];
   createdAt: string;
@@ -37,12 +38,15 @@ export interface Lead {
 
 // Default code colors (HSL)
 export const DEFAULT_CODE_COLORS = [
-  "210 100% 56%",  // blue
-  "142 71% 45%",   // green
-  "38 92% 50%",    // amber
-  "0 84% 60%",     // red
-  "262 83% 58%",   // purple
-  "174 72% 40%",   // teal
-  "330 81% 60%",   // pink
-  "25 95% 53%",    // orange
+  "210 100% 56%",
+  "142 71% 45%",
+  "38 92% 50%",
+  "0 84% 60%",
+  "262 83% 58%",
+  "174 72% 40%",
+  "330 81% 60%",
+  "25 95% 53%",
 ];
+
+/** Days before a "Message Sent" lead is considered stale */
+export const STALE_DAYS = 5;

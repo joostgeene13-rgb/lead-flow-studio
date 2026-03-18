@@ -2,16 +2,18 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { KanbanColumn } from "@/components/KanbanColumn";
 import { AddLeadDialog } from "@/components/AddLeadDialog";
+import { BulkImportDialog } from "@/components/BulkImportDialog";
 import { LeadDetailSheet } from "@/components/LeadDetailSheet";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useLeads } from "@/hooks/useLeads";
 import { LEAD_STATUSES, type Lead } from "@/types/lead";
-import { Plus, Users, Filter, X } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Users, Filter, X, Upload } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const Index = () => {
-  const { leads, addLead, updateLead, deleteLead, moveLeadToStatus } = useLeads();
+  const { leads, addLead, addLeads, updateLead, deleteLead, moveLeadToStatus } = useLeads();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedJobTitles, setSelectedJobTitles] = useState<string[]>([]);
@@ -21,7 +23,6 @@ const Index = () => {
     setSheetOpen(true);
   };
 
-  // Get unique job titles
   const jobTitles = useMemo(() => {
     const titles = new Set(leads.map((l) => l.jobTitle).filter(Boolean));
     return Array.from(titles).sort();
@@ -46,8 +47,8 @@ const Index = () => {
       <header className="border-b border-border bg-card px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Users className="h-4 w-4 text-primary-foreground" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
+              <Users className="h-4 w-4 text-accent-foreground" />
             </div>
             <div>
               <h1 className="text-sm font-semibold text-foreground">LinkedIn CRM</h1>
@@ -55,12 +56,17 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <NavLink to="/notes">
               <Button variant="outline" size="sm">Notes Overzicht</Button>
             </NavLink>
             <NavLink to="/coding">
               <Button variant="outline" size="sm">Codeer Tool</Button>
             </NavLink>
+            <Button variant="outline" size="sm" onClick={() => setBulkImportOpen(true)} className="gap-1.5">
+              <Upload className="h-3.5 w-3.5" />
+              Bulk Import
+            </Button>
             <Button size="sm" onClick={() => setAddDialogOpen(true)} className="gap-1.5">
               <Plus className="h-4 w-4" />
               Add Lead
@@ -119,6 +125,7 @@ const Index = () => {
       </main>
 
       <AddLeadDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onAdd={addLead} />
+      <BulkImportDialog open={bulkImportOpen} onOpenChange={setBulkImportOpen} onImport={addLeads} />
       <LeadDetailSheet
         lead={activeLead}
         open={sheetOpen}

@@ -7,7 +7,13 @@ const CODES_STORAGE_KEY = "linkedin-crm-codes";
 function loadLeads(): Lead[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const leads: Lead[] = JSON.parse(data);
+    // Migrate old leads without statusDate
+    return leads.map((l) => ({
+      ...l,
+      statusDate: l.statusDate ?? l.updatedAt ?? l.createdAt,
+    }));
   } catch {
     return [];
   }
@@ -34,19 +40,15 @@ export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>(loadLeads);
   const [codes, setCodes] = useState<NoteCode[]>(loadCodes);
 
-  useEffect(() => {
-    saveLeads(leads);
-  }, [leads]);
+  useEffect(() => { saveLeads(leads); }, [leads]);
+  useEffect(() => { saveCodes(codes); }, [codes]);
 
-  useEffect(() => {
-    saveCodes(codes);
-  }, [codes]);
-
-  const addLead = useCallback((lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => {
+  const addLead = useCallback((lead: Omit<Lead, "id" | "createdAt" | "updatedAt" | "statusDate">) => {
     const now = new Date().toISOString();
     const newLead: Lead = {
       ...lead,
       id: crypto.randomUUID(),
+      statusDate: now,
       createdAt: now,
       updatedAt: now,
     };
@@ -54,13 +56,32 @@ export function useLeads() {
     return newLead;
   }, []);
 
+  const addLeads = useCallback((newLeads: Omit<Lead, "id" | "createdAt" | "updatedAt" | "statusDate">[]) => {
+    const now = new Date().toISOString();
+    const created: Lead[] = newLeads.map((lead) => ({
+      ...lead,
+      id: crypto.randomUUID(),
+      statusDate: now,
+      createdAt: now,
+      updatedAt: now,
+    }));
+    setLeads((prev) => [...prev, ...created]);
+    return created;
+  }, []);
+
   const updateLead = useCallback((id: string, updates: Partial<Omit<Lead, "id" | "createdAt">>) => {
     setLeads((prev) =>
-      prev.map((lead) =>
-        lead.id === id
-          ? { ...lead, ...updates, updatedAt: new Date().toISOString() }
-          : lead
-      )
+      prev.map((lead) => {
+        if (lead.id !== id) return lead;
+        const now = new Date().toISOString();
+        const statusChanged = updates.status && updates.status !== lead.status;
+        return {
+          ...lead,
+          ...updates,
+          updatedAt: now,
+          statusDate: statusChanged ? now : lead.statusDate,
+        };
+      })
     );
   }, []);
 
@@ -69,10 +90,11 @@ export function useLeads() {
   }, []);
 
   const moveLeadToStatus = useCallback((id: string, status: LeadStatus) => {
+    const now = new Date().toISOString();
     setLeads((prev) =>
       prev.map((lead) =>
         lead.id === id
-          ? { ...lead, status, updatedAt: new Date().toISOString() }
+          ? { ...lead, status, statusDate: now, updatedAt: now }
           : lead
       )
     );
@@ -86,7 +108,6 @@ export function useLeads() {
 
   const removeCode = useCallback((codeId: string) => {
     setCodes((prev) => prev.filter((c) => c.id !== codeId));
-    // Also remove coded segments using this code
     setLeads((prev) =>
       prev.map((lead) => ({
         ...lead,
@@ -95,5 +116,5 @@ export function useLeads() {
     );
   }, []);
 
-  return { leads, codes, addLead, updateLead, deleteLead, moveLeadToStatus, addCode, removeCode };
+  return { leads, codes, addLead, addLeads, updateLead, deleteLead, moveLeadToStatus, addCode, removeCode };
 }
